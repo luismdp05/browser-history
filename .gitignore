@@ -1,0 +1,102 @@
+# Entornos virtuales
+venv/
+env/
+.benv/
+virtualenv/
+.env/
+.venv/
+
+# Entornos virtuales de Python (directorio y binario)
+ENV/
+env.bak/
+venv.bak/
+
+# Entornos conda
+*.conda
+envs/
+conda-*.yml
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.pyo
+*.so
+
+# Archivos de configuración de Python
+*.pyc
+*.pyo
+*.pyd
+
+# Distribuciones / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.manifest
+*.spec
+
+# Instaladores de paquetes
+*.exe
+*.msi
+*.dmg
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.mypy_cache/
+.pytest_cache/
+*.mo
+*.pot
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Entornos IDE
+.vscode/
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# Editor temporales
+*.swp
+*.swo
+*~
+
+# Archivos de entorno local
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+
+# Archivos de logs y bases de datos
+*.log
+*.sqlite3
+*.db
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+
+#Others
+history/*
+!history/
