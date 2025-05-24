@@ -8,37 +8,40 @@ from rich.progress import track
 from rich.panel import Panel
 from time import sleep
 import glob  # Para buscar el perfil de Firefox automáticamente
+import sys
+import platform
+import argparse
 
 console = Console()
 
 # Diccionario con rutas de historial y emojis por navegador
 BROWSERS = {
     "Google Chrome": {
-        "path": os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\User Data\Default\History"),
+        "path": os.path.expandvars(r"%LOCALAPPDATA%/Google/Chrome/User Data/Default/History") if platform.system() == "Windows" else os.path.expanduser("~/.config/google-chrome/Default/History"),
         "icon": "🌙"
     },
     "Microsoft Edge": {
-        "path": os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\History"),
+        "path": os.path.expandvars(r"%LOCALAPPDATA%/Microsoft/Edge/User Data/Default/History") if platform.system() == "Windows" else os.path.expanduser("~/.config/microsoft-edge/Default/History"),
         "icon": "🟩"
     },
     "Firefox": {
-        "path": os.path.expandvars(r"%APPDATA%\Mozilla\Firefox\Profiles"),
+        "path": os.path.expandvars(r"%APPDATA%/Mozilla/Firefox/Profiles") if platform.system() == "Windows" else os.path.expanduser("~/.mozilla/firefox"),
         "icon": "🔥"
     },
     "Brave": {
-        "path": os.path.expandvars(r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\History"),
+        "path": os.path.expandvars(r"%LOCALAPPDATA%/BraveSoftware/Brave-Browser/User Data/Default/History") if platform.system() == "Windows" else os.path.expanduser("~/.config/BraveSoftware/Brave-Browser/Default/History"),
         "icon": "🦁"
     },
     "Opera": {
-        "path": os.path.expandvars(r"%APPDATA%\Opera Software\Opera Stable\History"),
+        "path": os.path.expandvars(r"%APPDATA%/Opera Software/Opera Stable/History") if platform.system() == "Windows" else os.path.expanduser("~/.config/opera/History"),
         "icon": "🎭"
     },
     "Vivaldi": {
-        "path": os.path.expandvars(r"%LOCALAPPDATA%\Vivaldi\User Data\Default\History"),
+        "path": os.path.expandvars(r"%LOCALAPPDATA%/Vivaldi/User Data/Default/History") if platform.system() == "Windows" else os.path.expanduser("~/.config/vivaldi/Default/History"),
         "icon": "🚀"
     },
     "Yandex Browser": {
-        "path": os.path.expandvars(r"%LOCALAPPDATA%\Yandex\YandexBrowser\User Data\Default\History"),
+        "path": os.path.expandvars(r"%LOCALAPPDATA%/Yandex/YandexBrowser/User Data/Default/History") if platform.system() == "Windows" else os.path.expanduser("~/.config/yandex-browser/Default/History"),
         "icon": "🇷🇺"
     }
 }
@@ -158,20 +161,52 @@ def save_to_excel(history, browser):
         console.print(f"[bold red]❌ {str(e)}[/bold red]")
 
 def main():
-    """Función principal que permite al usuario seleccionar el navegador."""
+    """Función principal que permite al usuario seleccionar el navegador o usar CLI."""
+    parser = argparse.ArgumentParser(description="Extrae el historial de navegación de diferentes navegadores.")
+    parser.add_argument("-b", "--browser", type=str, help="Nombre del navegador (Chrome, Edge, Firefox, Brave, Opera, Vivaldi, Yandex)")
+    parser.add_argument("-o", "--output", type=str, help="Ruta de salida del archivo Excel")
+    args = parser.parse_args()
+
+    if args.browser:
+        browser = None
+        for b in BROWSERS:
+            if args.browser.lower() in b.lower():
+                browser = b
+                break
+        if not browser:
+            console.print(f"[bold red]❌ Navegador '{args.browser}' no soportado.[/bold red]")
+            sys.exit(1)
+        if browser == "Firefox":
+            db_path = get_firefox_history_path()
+            if not db_path or not os.path.exists(db_path):
+                console.print(f"[bold red]⚠ No se encontró el historial de {browser}.[/bold red]\n")
+                sys.exit(1)
+            history = extract_firefox_history(db_path)
+        else:
+            db_path = BROWSERS[browser]["path"]
+            if not os.path.exists(db_path):
+                console.print(f"[bold red]⚠ No se encontró el historial de {browser}.[/bold red]\n")
+                sys.exit(1)
+            history = extract_history(db_path, browser)
+        if history:
+            output_path = args.output if args.output else None
+            save_to_excel(history, browser) if not output_path else save_to_excel_custom(history, browser, output_path)
+        else:
+            console.print(f"[bold red]❌ No se pudo extraer el historial de {browser}.[/bold red]")
+        return
+
+    # CLI interactivo
     while True:
         show_menu()
-
         try:
             choice = int(Prompt.ask("\n🔹 [bold yellow]Ingresa el número correspondiente[/bold yellow]"))
-
             if choice == 0:
                 console.print("\n[bold red]🚪 Saliendo del programa... ¡Hasta luego! 👋[/bold red]")
                 sleep(1)
                 break
-
+            if choice < 0 or choice > len(BROWSERS):
+                raise ValueError
             browser = list(BROWSERS.keys())[choice - 1]
-
             if browser == "Firefox":
                 db_path = get_firefox_history_path()
                 if not db_path or not os.path.exists(db_path):
@@ -188,20 +223,26 @@ def main():
                 console.print(f"\n[bold blue]🔍 {BROWSERS[browser]['icon']} Extrayendo historial de {browser}...[/bold blue]")
                 sleep(1)
                 history = extract_history(db_path, browser)
-
             if history:
                 save_to_excel(history, browser)
             else:
                 console.print(f"[bold red]❌ No se pudo extraer el historial de {browser}.[/bold red]")
-
         except (ValueError, IndexError):
             console.print("[bold red]❌ Selección no válida. Intenta de nuevo.[/bold red]")
-
         again = Prompt.ask("\n🔄 [bold yellow]¿Quieres extraer otro historial? (s/n)[/bold yellow]", choices=["s", "n"], default="n")
         if again.lower() != "s":
             console.print("\n[bold red]🚪 Saliendo del programa... ¡Hasta luego! 👋[/bold red]")
             sleep(1)
             break
+
+def save_to_excel_custom(history, browser, output_path):
+    """Guarda el historial en un archivo Excel personalizado."""
+    try:
+        df = pd.DataFrame(history, columns=["URL", "Title", "Last Visit Time"])
+        df.to_excel(output_path, index=False)
+        console.print(f"[bold green]✔ {BROWSERS[browser]['icon']} Historial de {browser} guardado en '{output_path}' ✅[/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]❌ {str(e)}[/bold red]")
 
 if __name__ == "__main__":
     main()
